@@ -115,10 +115,22 @@ endif
 
 /*- endfor -*/
 
+# Rust rules for camkes components that use rust.
+/*- for i in instances if not i.type.hardware -*/
+.PHONY: /*? i.name ?*/_rust
+/*? i.name ?*/_rust:
+	@echo " [RS] $(/*? i.name ?*/_RUST)"
+	echo $(SOURCE_DIR)/components//*? i.type.name ?*/
+	cd $(SOURCE_DIR)/components//*? i.type.name ?*/ && RUST_TARGET_PATH=${STAGE_DIR}/common/ \
+	$(XARGO) build --lib $(RUST_CARGO_FLAGS) --manifest-path $(SOURCE_DIR)/components//*? i.type.name ?*//Cargo.toml --target=$(RUST_CUSTOM_TARGET)
+	$(Q) cp $(SOURCE_DIR)/components//*? i.type.name ?*//target/${RUST_CUSTOM_TARGET}/${RUST_RELEASE_MODE}/$(/*? i.name ?*/_RUST:%=lib%.a) $(/*? i.name ?*/_RUST:%=%.a)
+/*- endfor -*/
+
 # Library dependencies required by glue code.
 /*- for i in instances -*/
 /*? i.name ?*/_instance_LIBS += ${/*? i.type.name ?*/_LIBS} ${CAMKES_CORE_LIBS}
 /*- endfor -*/
+
 
 # Instance entry point generation.
 /*- for i in instances -*/
@@ -401,13 +413,15 @@ endef
 /*? i.name ?*/.instance.bin: $(/*? i.name ?*/_CFILES:%.c=%.o) \
                              $(/*? i.name ?*/_CXXFILES:%.cxx=%.o) \
                              $(/*? i.name ?*/_ASMFILES:%.S=%.o) \
+                             /*? i.name ?*/_rust \
                              $(/*? i.name ?*/_OFILES) \
                              /*- if rump_config -*/ $(/*? i.name ?*/_rumpbin) /*- endif -*/ \
                              /*- if rump_config -*/ $(INTERMEDIATE_BASEFILE) /*- endif -*/ \
                              $(/*? i.name ?*/_instance_LIBS:%=lib%.a) \
                              $(abspath ${BUILD_DIR})/ld//*? i.name ?*//generated/linker.lds
 	@echo " [LD] $(notdir $@)"
-	${Q}${/*? i.name ?*/_CC} $(CRTOBJFILES) $(filter %.o,$^) $(FINOBJFILES) ${/*? i.name ?*/_instance_LDFLAGS} -o $@
+	@echo " [RUST_MAIN_OBJECT] $(/*? i.name ?*/_RUST:%=%.a)"
+	${/*? i.name ?*/_CC} $(CRTOBJFILES) $(filter %.o,$^) $(/*? i.name ?*/_RUST:%=%.a) $(FINOBJFILES) ${/*? i.name ?*/_instance_LDFLAGS} -o $@
 	$(/*? i.name ?*/_buildrump)
 
 /*- set p = Perspective(group=i.address_space) -*/
@@ -557,3 +571,4 @@ endif
       --remove-section .rel.eh_frame --remove-section .rela.eh_frame $@ \
       >/dev/null 2>/dev/null
 /*- endfor -*/
+
