@@ -117,13 +117,13 @@ endif
 
 # Rust rules for camkes components that use rust.
 /*- for i in instances if not i.type.hardware -*/
-.PHONY: /*? i.name ?*/_rust
-/*? i.name ?*/_rust:
-	@echo " [RS] $(/*? i.name ?*/_RUST)"
+.PHONY: /*? i.type.name ?*/_rust
+/*? i.type.name ?*/_rust:
+	@echo " [RS] $(/*? i.name ?*/_RUST) (but also /*? i.name ?*/ and /*? i.type.name ?*/  )"
 	echo $(SOURCE_DIR)/components//*? i.type.name ?*/
 	cd $(SOURCE_DIR)/components//*? i.type.name ?*/ && RUST_TARGET_PATH=${STAGE_DIR}/common/ \
 	$(XARGO) build --lib $(RUST_CARGO_FLAGS) --manifest-path $(SOURCE_DIR)/components//*? i.type.name ?*//Cargo.toml --target=$(RUST_CUSTOM_TARGET)
-	$(Q) cp $(SOURCE_DIR)/components//*? i.type.name ?*//target/${RUST_CUSTOM_TARGET}/${RUST_RELEASE_MODE}/$(/*? i.name ?*/_RUST:%=lib%.a) $(/*? i.name ?*/_RUST:%=%.a)
+	$(Q) cp $(SOURCE_DIR)/components//*? i.type.name ?*//target/${RUST_CUSTOM_TARGET}/${RUST_RELEASE_MODE}/$(/*? i.type.name ?*/_RUST:%=lib%.a) $(/*? i.type.name ?*/_RUST:%=%.a)
 /*- endfor -*/
 
 # Library dependencies required by glue code.
@@ -410,19 +410,23 @@ define /*? i.name ?*/_buildrump
 endef
 /*- endif -*/
 
+ifdef /*? i.type.name ?*/_RUST
+/*? i.type.name ?*/_CARGO_TARGET=/*? i.type.name ?*/_rust
+endif
+
 /*? i.name ?*/.instance.bin: $(/*? i.name ?*/_CFILES:%.c=%.o) \
                              $(/*? i.name ?*/_CXXFILES:%.cxx=%.o) \
                              $(/*? i.name ?*/_ASMFILES:%.S=%.o) \
-                             /*? i.name ?*/_rust \
+                             $(/*? i.type.name ?*/_CARGO_TARGET) \
                              $(/*? i.name ?*/_OFILES) \
                              /*- if rump_config -*/ $(/*? i.name ?*/_rumpbin) /*- endif -*/ \
                              /*- if rump_config -*/ $(INTERMEDIATE_BASEFILE) /*- endif -*/ \
                              $(/*? i.name ?*/_instance_LIBS:%=lib%.a) \
                              $(abspath ${BUILD_DIR})/ld//*? i.name ?*//generated/linker.lds
 	@echo " [LD] $(notdir $@)"
-	@echo " [RUST_MAIN_OBJECT] $(/*? i.name ?*/_RUST:%=%.a)"
-	${/*? i.name ?*/_CC} $(CRTOBJFILES) $(filter %.o,$^) $(/*? i.name ?*/_RUST:%=%.a) $(FINOBJFILES) ${/*? i.name ?*/_instance_LDFLAGS} -o $@
-	$(/*? i.name ?*/_buildrump)
+	@echo " [RUST_MAIN_OBJECT] $(/*? i.type.name ?*/_RUST:%=%.a)"
+	${/*? i.name ?*/_CC} $(CRTOBJFILES) $(filter %.o,$^) $(/*? i.type.name ?*/_RUST:%=%.a) $(FINOBJFILES) ${/*? i.name ?*/_instance_LDFLAGS} -o $@
+	$(/*? i.type.name ?*/_buildrump)
 
 /*- set p = Perspective(group=i.address_space) -*/
 /*? p['elf_name'] ?*/: /*? i.name ?*/.instance-copy.bin
