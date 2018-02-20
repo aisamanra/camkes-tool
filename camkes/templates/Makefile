@@ -119,10 +119,9 @@ endif
 /*- for i in instances if not i.type.hardware -*/
 .PHONY: /*? i.type.name ?*/_rust
 /*? i.type.name ?*/_rust:
-	@echo " [RS] $(/*? i.name ?*/_RUST) (but also /*? i.name ?*/ and /*? i.type.name ?*/  )"
-	echo $(SOURCE_DIR)/components//*? i.type.name ?*/
-	cd $(SOURCE_DIR)/components//*? i.type.name ?*/ && RUST_TARGET_PATH=${STAGE_DIR}/common/ \
-	$(XARGO) build --lib $(RUST_CARGO_FLAGS) --manifest-path $(SOURCE_DIR)/components//*? i.type.name ?*//Cargo.toml --target=$(RUST_CUSTOM_TARGET)
+	@echo " [RS] /*? i.type.name ?*/_rust"
+	cd $(SOURCE_DIR)/components//*? i.type.name ?*/ && RUST_TARGET_PATH=${STAGE_DIR}/common/ RUST_BACKTRACE=1 \
+	CARGO_HOME="${PWD}" RUSTFLAGS="--sysroot=${PWD}/sysroot" cargo build --lib $(RUST_CARGO_FLAGS) --manifest-path $(SOURCE_DIR)/components//*? i.type.name ?*//Cargo.toml --target=$(RUST_CUSTOM_TARGET)
 	$(Q) cp $(SOURCE_DIR)/components//*? i.type.name ?*//target/${RUST_CUSTOM_TARGET}/${RUST_RELEASE_MODE}/$(/*? i.type.name ?*/_RUST:%=lib%.a) $(/*? i.type.name ?*/_RUST:%=%.a)
 /*- endfor -*/
 
